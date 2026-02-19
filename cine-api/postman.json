@@ -1,0 +1,317 @@
+{
+  "info": {
+    "_postman_id": "b2d2c3f0-aaaa-bbbb-cccc-123456789000",
+    "name": "Cine API (Django + Postgres + JWT + Mongo)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "movieCatalogId", "value": "" },
+    { "key": "reservationEventsId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (Public) - POST /api/auth/register/",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"user1\",\n  \"email\": \"user1@mail.com\",\n  \"password\": \"123456\"\n}"
+            }
+          }
+        },
+        {
+            "name": "Login (JWT) - POST /api/auth/login/ (save tokens)",
+            "event": [
+                {
+                "listen": "test",
+                "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                    "let jsonData = {};",
+                    "try { jsonData = pm.response.json(); } catch (e) {}",
+                    "",
+                    "if (jsonData.access) {",
+                    "  pm.collectionVariables.set('accessToken', jsonData.access);",
+                    "  pm.environment.set('accessToken', jsonData.access);",
+                    "}",
+                    "",
+                    "if (jsonData.refresh) {",
+                    "  pm.collectionVariables.set('refreshToken', jsonData.refresh);",
+                    "  pm.environment.set('refreshToken', jsonData.refresh);",
+                    "}",
+                    "",
+                    "pm.test('Token access recibido', function () {",
+                    "  pm.expect(jsonData.access).to.be.a('string');",
+                    "});"
+                    ]
+                }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                { "key": "Content-Type", "value": "application/json" }
+                ],
+                "url": { "raw": "{{baseUrl}}/api/auth/login/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login", ""] },
+                "body": {
+                "mode": "raw",
+                "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin\"\n}"
+                }
+            }
+        },
+        {
+          "name": "Refresh (JWT) - POST /api/auth/refresh/ (save access)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.access) pm.collectionVariables.set('accessToken', jsonData.access);",
+                  "pm.test('Token access refrescado', function () { pm.expect(jsonData.access).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/refresh/", "host": ["{{baseUrl}}"], "path": ["api", "auth", "refresh", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Postgres - shows",
+      "item": [
+        {
+          "name": "List shows (Admin token) - GET /api/shows/",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/shows/", "host": ["{{baseUrl}}"], "path": ["api", "shows", ""] }
+          }
+        },
+        {
+          "name": "Create show (Admin) - POST /api/shows/",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/shows/", "host": ["{{baseUrl}}"], "path": ["api", "shows", ""] },
+            "body": { "mode": "raw", "raw": "{\n  \"movie_title\": \"Avatar\",\n \"room\": \"Sala 11\",\n \"price\": 7.85,\n \"available_seats\": 48\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Postgres - reservations",
+      "item": [
+        {
+          "name": "List reservations (Public) - GET /api/reservations/",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/reservations/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", ""] }
+          }
+        },
+        {
+          "name": "Create reservation (Admin) - POST /api/reservations/",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/reservations/", "host": ["{{baseUrl}}"], "path": ["api", "reservations", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"show\": 1,\n  \"customer_name\": \"Disney\",\n  \"seats\": 48,\n  \"status\": \"RESERVED\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mongo - movie_catalog",
+      "item": [
+        {
+          "name": "List movie catalog (Auth) - GET /api/movie-catalog/",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/movie-catalog/", "host": ["{{baseUrl}}"], "path": ["api", "movie-catalog", ""] }
+          }
+        },
+        {
+          "name": "Create movie catalog (Auth) - POST /api/movie-catalog/ (save movieCatalogId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('movieCatalogId', jsonData.id);",
+                  "pm.test('Se creó movie catalog', function () { pm.expect(jsonData.id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/movie-catalog/", "host": ["{{baseUrl}}"], "path": ["api", "movie-catalog", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"movie_title\": \"Avatar\",\n  \"genre\": \"Science Fiction\",\n  \"duration_min\": 180.0,\n  \"is_active\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Get movie catalog by id (Auth) - GET /api/movie-catalog/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalog/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalog", "{{movieCatalogId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Patch movie catalog (Auth) - PATCH /api/movie-catalog/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalog/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalog", "{{movieCatalogId}}", ""]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"is_active\": false\n}" }
+          }
+        },
+        {
+          "name": "Delete movie catalog (Auth) - DELETE /api/movie-catalog/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/movie-catalog/{{movieCatalogId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "movie-catalog", "{{movieCatalogId}}", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Mongo - reservation_events",
+      "item": [
+        {
+          "name": "List reservation events (Auth) - GET /api/reservation-events/",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/reservation-events/", "host": ["{{baseUrl}}"], "path": ["api", "reservation-events", ""] }
+          }
+        },
+        {
+          "name": "Create reservation event (Auth) - POST /api/reservation-events/ (save reservationEventsId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let jsonData = {};",
+                  "try { jsonData = pm.response.json(); } catch (e) {}",
+                  "if (jsonData.id) pm.collectionVariables.set('reservationEventsId', jsonData.id);",
+                  "pm.test('Se creó reservation event', function () { pm.expect(jsonData.id).to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/reservation-events/", "host": ["{{baseUrl}}"], "path": ["api", "reservation-events", ""] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"_id\": 1,\n  \"reservation_id\": \"{{movieCatalogId}}\",\n  \"event_type\": \"CHECKED_IN\",\n  \"source\": \"SYSTEM\",\n  \"note\": \"Movie in 4D\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get reservation event by id (Auth) - GET /api/reservation-events/:id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventsId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservation-events", "{{reservationEventsId}}", ""]
+            }
+          }
+        },
+        {
+          "name": "Patch reservation event (Auth) - PATCH /api/reservation-events/:id",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventsId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservation-events", "{{reservationEventsId}}", ""]
+            },
+            "body": { "mode": "raw", "raw": "{\n  \"note\": \"Movie in HD\"\n}" }
+          }
+        },
+        {
+          "name": "Delete reservation event (Auth) - DELETE /api/reservation-events/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/reservation-events/{{reservationEventsId}}/",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reservation-events", "{{reservationEventsId}}", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
